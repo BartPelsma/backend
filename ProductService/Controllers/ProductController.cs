@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using Flurl.Http;
 using Microsoft.Extensions.Options;
 using ProductService.Converters;
+using ImageService.Models;
+using System.IO;
 
 namespace ProductService.Controllers
 {
@@ -117,7 +119,7 @@ namespace ProductService.Controllers
                 InventoryLocation = product.InventoryLocation
             };
 
-            var image = await $"{_config.Value.ApiGatewayBaseUrl}/api/image/{product.Id}".AllowAnyHttpStatus().GetJsonAsync<ImageBlobModel>();
+            var image = await $"{_config.Value.ApiGatewayBaseUrl}/api/image/{product.Id}".AllowAnyHttpStatus().GetJsonAsync<PdfBlobModel>();
             if(image != default && image.Blob != default)
             {
                 cartProduct.Image = Convert.ToBase64String(image.Blob);
@@ -211,7 +213,7 @@ namespace ProductService.Controllers
 
             if (addProductModel.Images != default && addProductModel.Images.Any())
             {
-                var addImagesObject = new AddImageModel(newProduct.Id, LinkedTableType.PRODUCT, addProductModel.Images);
+                var addImagesObject = new AddPdfModel(newProduct.Id, LinkedTableType.PRODUCT, addProductModel.Images, addProductModel.Pdf);
                 if ((await $"{_config.Value.ApiGatewayBaseUrl}/api/image".AllowAnyHttpStatus().PostJsonAsync(addImagesObject)).StatusCode != 201)
                 {
                     _dbContext.Products.Remove(newProduct);
@@ -289,6 +291,7 @@ namespace ProductService.Controllers
             return Ok();
         }
 
+
         /// <summary>
         /// Gets all catalog entries based on pageindex and pagesize
         /// </summary>
@@ -308,8 +311,10 @@ namespace ProductService.Controllers
 
             foreach (var item in catalogObjects)
             {
-                var images = await $"{_config.Value.ApiGatewayBaseUrl}/api/image/images/{item.Id}".AllowAnyHttpStatus().GetJsonAsync<List<ImageBlobModel>>();
+                var images = await $"{_config.Value.ApiGatewayBaseUrl}/api/image/images/{item.Id}".AllowAnyHttpStatus().GetJsonAsync<List<PdfBlobModel>>();
                 var catalogImages = new List<string>();
+                var pdfs = await $"{_config.Value.ApiGatewayBaseUrl}/api/pdf/{item.Id}".AllowAnyHttpStatus().GetJsonAsync<List<PdfBlobModel>>();
+                var catalogPdf = new List<string>();
 
                 if (images != null)
                 {
@@ -321,10 +326,20 @@ namespace ProductService.Controllers
                         }
                     }
                 }
+                if (pdfs != null)
+                {
+                    foreach (var pdf in pdfs)
+                    {
+                        if (pdf != default && pdf.Blob != default)
+                        {
+                            catalogImages.Add(Convert.ToBase64String(pdf.Blob));
+                        }
+                    }
+                }
 
                 if (!allitems.Any())
                 {
-                    allitems.Add(converter.AddNewEntryToCatalogList(item, catalogImages));
+                    allitems.Add(converter.AddNewEntryToCatalogList(item, catalogImages, catalogPdf));
                     continue;
                 }
 
@@ -332,11 +347,11 @@ namespace ProductService.Controllers
                 var firstlist = allitems.FirstOrDefault(x => x.CategoryName == item.Category.Name);
                 if (firstlist != default)
                 {
-                    firstlist.CatalogItems.Add(converter.ConvertProductToCatalogItemAsync(item, catalogImages));
+                    firstlist.CatalogItems.Add(converter.ConvertProductToCatalogItemAsync(item, catalogImages, catalogPdf));
                 }
                 else
                 {
-                    allitems.Add(converter.AddNewEntryToCatalogList(item, catalogImages));
+                    allitems.Add(converter.AddNewEntryToCatalogList(item, catalogImages, catalogPdf));
                 }
             }
             var page = new CatalogPage 
@@ -368,6 +383,113 @@ namespace ProductService.Controllers
             page.CatalogItems = allitems.Skip((page.CurrentPage) * pageSize).Take(pageSize).ToList();
 
             return Ok(page);
+        }
+
+        /// <summary>
+        /// Gets all images bound to the product id
+        /// </summary>
+        /// <param name="productId"></param>
+        /// <returns>Returns a list of images</returns>
+        [HttpGet("product/{productId}")]
+        public async Task<IActionResult> GetPdfByProductId(int productId)
+        {
+            var pdfs = await _dbContext.pdfs.Where(x => x.LinkedKey == productId && x.LinkedTableType == LinkedTableType.PRODUCT).ToListAsync();
+            List<PdfBlobModel> imageBlobModels = new List<PdfBlobModel>();
+            foreach (var item in pdfs)
+            {
+                imageBlobModels.Add(new PdfBlobModel() { Pdf = item?.Blob });
+            }
+
+            return Ok(imageBlobModels);
+        }
+
+        /// <summary>
+        /// Adds image to the database
+        /// </summary>
+        /// <param name="addImageModel">The API call data object</param>
+        /// <returns>Badrequest if fails, Created if success </returns>
+        [HttpPost]
+        public async Task<IActionResult> SavePdf(AddPdfModel addPdfModel)
+        {
+            if (addPdfModel == default)
+            {
+                return BadRequest("NO_DATA");
+            }
+
+            if (addPdfModel.Pdf == default || !addPdfModel.Pdf.Any())
+            {
+                return BadRequest("NO_PDF");
+            }
+
+            if (addPdfModel.LinkedPrimaryKey < 1)
+            {
+                return BadRequest("NO_LINKED_KEY");
+            }
+
+            List<Pdf> pdfs = new List<Pdf>();
+
+            foreach (var pdf in addPdfModel.Pdf)
+            {
+                if (CheckPdf(new CheckPdfModel() { Pdf = pdf }).GetType() != typeof(OkResult))
+                {
+                    return BadRequest("File is not an Pdf");
+                }
+
+                var newPdf = new Pdf()
+                {
+                    LinkedKey = addPdfModel.LinkedPrimaryKey,
+                    LinkedTableType = addPdfModel.LinkedTableType,
+                    Blob = Convert.FromBase64String(pdf[(pdf.IndexOf(",") + 1)..])
+                };
+
+                pdfs.Add(newPdf);
+            }
+
+            await _dbContext.pdfs.AddRangeAsync(pdfs);
+            await _dbContext.SaveChangesAsync();
+
+            return Created("/product", pdfs);
+        }
+
+        /// <summary>
+        /// Checks if Base64 string is an image
+        /// </summary>
+        /// <param name="checkImageModel">Object containing the Base64 string</param>
+        /// <returns>Badrequest if it's not an image. Ok if it is an image</returns>
+        [HttpPost("checkPdfModel")]
+        public IActionResult CheckPdf(CheckPdfModel checkPdfModel)
+        {
+            if (checkPdfModel == default || string.IsNullOrWhiteSpace(checkPdfModel.Pdf))
+            {
+                return BadRequest("Request did not contain data");
+            }
+
+
+            if (!checkPdfModel.Pdf.Contains(","))
+            {
+                return BadRequest("Base64string is not JS based Base64 (does not contain type)");
+            }
+
+            var acceptedPdfTypes = new string[] { "pdf" };
+
+            var fileType = checkPdfModel.Pdf.Split(",")[0];
+            if (!acceptedPdfTypes.Any(fileType.Contains))
+            {
+                return BadRequest("Incorrect pdf type");
+            }
+
+            try
+            {
+                using var ms = new MemoryStream(Convert.FromBase64String(checkPdfModel.Pdf[(checkPdfModel.Pdf.IndexOf(",") + 1)..]));
+                var pdf = System.Drawing.Pdf.FromStream(ms);
+                pdf.Dispose();
+            }
+            catch (Exception)
+            {
+                return BadRequest("Incorrect pdf type");
+            }
+
+            return Ok();
         }
     }
 }

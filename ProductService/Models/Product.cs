@@ -32,6 +32,9 @@ namespace ProductService.Models
         /// </summary>
         [Required]
         public string Description { get; set; }
+
+        [Required]
+        public string Pdf { get; set; }
         /// <summary>
         /// Displays the product inventory location
         /// </summary>

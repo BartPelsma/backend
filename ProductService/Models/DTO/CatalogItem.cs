@@ -39,6 +39,8 @@ namespace ProductService.Models.DTO
         /// Image index to indicate position
         /// </summary>
         public int ImageIndex { get; set; }
+
+        public List<string> Pdf { get; set; }
         /// <summary>
         /// Start date renting the catalogitem
         /// </summary>

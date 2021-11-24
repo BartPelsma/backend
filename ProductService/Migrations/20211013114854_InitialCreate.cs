@@ -28,6 +28,7 @@ namespace ProductService.Migrations
                     CatalogNumber = table.Column<int>(type: "int", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PDF = table.Column<string>(type:"nvarchar(max)", nullable: false),
                     InventoryLocation = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ProductState = table.Column<int>(type: "int", nullable: false),
                     RequiresApproval = table.Column<bool>(type: "bit", nullable: false),

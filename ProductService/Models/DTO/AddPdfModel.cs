@@ -3,7 +3,7 @@
     /// <summary>
     /// Data model for the AddImage calls
     /// </summary>
-    public class AddImageModel
+    public class AddPdfModel
     {
         /// <summary>
         /// Contains primarykey of product or note
@@ -18,11 +18,14 @@
         /// </summary>
         public string[] Base64Images { get; set; }
 
-        public AddImageModel(int linkedPrimaryKey, LinkedTableType linkedTableType, string[] base64Images)
+        public string[] Pdf { get; set; }
+
+        public AddPdfModel(int linkedPrimaryKey, LinkedTableType linkedTableType, string[] base64Images, string[] pdf)
         {
             LinkedPrimaryKey = linkedPrimaryKey;
             LinkedTableType = linkedTableType;
             Base64Images = base64Images;
+            Pdf = pdf;
         }
     }
 }

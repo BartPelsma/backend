@@ -150,7 +150,7 @@ namespace ProductService.Tests.UnitTests
         {
             var controller = Initialize();
             using var httpTest = new HttpTest();
-            httpTest.RespondWithJson(new ImageBlobModel
+            httpTest.RespondWithJson(new PdfBlobModel
             {
                 Blob = null
             });

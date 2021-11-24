@@ -32,7 +32,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogpageEmpty()
         {
-            var imgblobs = new List<ImageBlobModel>();
+            var imgblobs = new List<PdfBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
             using (var httpTest = new HttpTest())
@@ -49,7 +49,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogpage()
         {
-            var imgblobs = new List<ImageBlobModel>();
+            var imgblobs = new List<PdfBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
             using (var httpTest = new HttpTest())
@@ -67,7 +67,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogpageNumber3()
         {
-            var imgblobs = new List<ImageBlobModel>();
+            var imgblobs = new List<PdfBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
             using (var httpTest = new HttpTest())

@@ -1,6 +1,7 @@
 ﻿using ProductService.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
+using ImageService.Models;
 
 namespace ProductService.DBContexts
 {
@@ -38,6 +39,8 @@ namespace ProductService.DBContexts
         /// DbSet objects are created from a DbContext using the DbContext.Set method.
         /// </summary>
         public DbSet<Category> Categories { get; set; }
+        
+        public DbSet<Pdf> pdfs { get; set; }
 
         /// <summary>
         /// OnConfiguring builds the connection between the database and the API using the given connection string
