@@ -42,8 +42,8 @@ namespace ProductService.Controllers
         /// <param name="pageIndex">Which page is being requested. If 0 or lower returns first page. If higher than amount of pages returns the last page </param>
         /// <param name="pageSize">The amount of products that are being requested</param>
         /// <returns>Object containing count of all products, current page and a collection of products</returns>
-        [HttpGet("page/{pageIndex}/{pageSize}")]
-        public async Task<IActionResult> GetInventoryItems(int pageIndex, int pageSize)
+        [HttpGet("page/{pageIndex}/{pageSize}/{searchfilter}")]
+        public async Task<IActionResult> GetInventoryItems(int pageIndex, int pageSize, string searchfilter)
         {
             if (pageIndex < 0)
             {
@@ -65,8 +65,22 @@ namespace ProductService.Controllers
                             Name = product.Name,
                             Location = product.InventoryLocation,
                             RequiresApproval = product.RequiresApproval,
+                            Status = product.ProductState,
+                        };
+
+            if (searchfilter != "-")
+            {
+                query = from product in _dbContext.Products where product.Name.ToLower().Contains(searchfilter.ToLower())
+                        orderby product.CatalogNumber ascending
+                        select new InventoryProduct()
+                        {
+                            Id = product.Id,
+                            Name = product.Name,
+                            Location = product.InventoryLocation,
+                            RequiresApproval = product.RequiresApproval,
                             Status = product.ProductState
                         };
+            }
 
             page.TotalProductCount = await query.CountAsync();
 
@@ -90,6 +104,7 @@ namespace ProductService.Controllers
             page.CurrentPage = Math.Min(pageIndex, lastPage);
 
             page.Products = await (query).Skip(page.CurrentPage * pageSize).Take(pageSize).ToListAsync();
+
             return Ok(page);
         }
 
@@ -295,16 +310,52 @@ namespace ProductService.Controllers
         /// <param name="pageIndex"></param>
         /// <param name="pageSize"></param>
         /// <returns>Empty list if no entries are found, Succes a CatalogPage object</returns>
-        [HttpGet("catalogentries/{pageindex}/{pagesize}")]
-        public async Task<IActionResult> GetCatalogEntries(int pageIndex, int pageSize)
+        [HttpGet("catalogentries/{pageindex}/{pagesize}/{searchfilter}/{catalogfilter}")]
+        public async Task<IActionResult> GetCatalogEntries(int pageIndex, int pageSize, string searchfilter, string catalogFilter)
         {
             if (pageIndex < 0 || pageSize < 0)
             {
                 return BadRequest("CATALOG.INCORRECT_PAGESIZE_OR_INDEX");
             }
             var converter = new CatalogItemConverter();
+
             var catalogObjects = await _dbContext.Products.OrderBy(x => x.CatalogNumber).Include(x => x.Category).ToListAsync();
+            if(searchfilter != "-")
+            {
+                catalogObjects = await _dbContext.Products.Where(p => p.Name.ToLower().Contains(searchfilter.ToLower())).OrderBy(x => x.CatalogNumber).Include(x => x.Category).ToListAsync();
+            }
+
             var allitems = new List<CatalogItemsWithCategory>();
+
+
+            
+            if (catalogFilter != "-")
+            {
+                var tempList = new List<Product>();
+                foreach (var item in catalogObjects.Where(n => n.Category.Name == catalogFilter))
+                {
+                    tempList.Add(item);
+                }
+
+                catalogObjects = tempList;
+            }
+
+            if (searchfilter != "-")
+            {
+                var tempList = new List<Product>();
+                foreach (var item in catalogObjects)
+                {
+                    if (item.Name.ToString().ToLower().Contains(searchfilter.ToLower()))
+                    {
+                        tempList.Add(item);
+                    }
+                }
+                catalogObjects = tempList;
+            }
+
+            
+
+
 
             foreach (var item in catalogObjects)
             {
