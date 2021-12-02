@@ -238,6 +238,63 @@ namespace ProductService.Controllers
             return Created($"/product/{newProduct.Id}", newProduct);
         }
 
+
+
+        public async Task<IActionResult> UpdateProduct(AddProductModel UpdateProductModel, int id)
+        {
+            if (UpdateProductModel == default)
+            {
+                return BadRequest("PRODUCT.UPDATE.NO_DATA");
+            }
+
+            if (string.IsNullOrWhiteSpace(UpdateProductModel.Name))
+            {
+                return BadRequest("PRODUCT.UPDATE.NO_NAME");
+            }
+
+            if (string.IsNullOrWhiteSpace(UpdateProductModel.Description))
+            {
+                return BadRequest("PRODUCT.UPDATE.NO_NAME");
+            }
+
+            if (string.IsNullOrWhiteSpace(UpdateProductModel.Description))
+            {
+                return BadRequest("PRODUCT.UPDATE.NO_DESCRIPTION");
+            }
+
+            if (UpdateProductModel.CatalogNumber < 0)
+            {
+                return BadRequest("PRODUCT.UPDATE.CATALOG_NUMBER_INCORRECT");
+            }
+
+            if (UpdateProductModel.CategoryId < 0)
+            {
+                return BadRequest("PRODUCT.UPDATE.NO_CATEGORY");
+            }
+
+            if (await _dbContext.Products.AnyAsync(x => x.Name.Trim().ToLower() == UpdateProductModel.Name.Trim().ToLower()))
+            {
+                return BadRequest("PRODUCT.UPDATE.NAME_ALREADY_EXISTS");
+            }
+
+            var result = _dbContext.Products.SingleOrDefault(p => p.Id == id);
+            if (result != null)
+            {
+                result.CatalogNumber = UpdateProductModel.CatalogNumber;
+                result.Name = UpdateProductModel.Name;
+                result.Description = UpdateProductModel.Description;
+                result.InventoryLocation = UpdateProductModel.Location;
+                result.RequiresApproval = UpdateProductModel.RequiresApproval;
+                result.ProductState = ProductState.AVAILABLE;
+                result.Category = await _dbContext.Categories.FirstOrDefaultAsync(x => x.Id == UpdateProductModel.CategoryId);
+            }
+                
+            await _dbContext.SaveChangesAsync();
+
+
+
+            return Created($"/product/{result.Id}", result);
+        }
         /// <summary>
         /// Shift all catalog items so that there are no duplicates
         /// </summary>
