@@ -239,8 +239,8 @@ namespace ProductService.Controllers
         }
 
 
-
-        public async Task<IActionResult> UpdateProduct(AddProductModel UpdateProductModel, int id)
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateProduct(UpdateProductModel UpdateProductModel)
         {
             if (UpdateProductModel == default)
             {
@@ -277,7 +277,7 @@ namespace ProductService.Controllers
                 return BadRequest("PRODUCT.UPDATE.NAME_ALREADY_EXISTS");
             }
 
-            var result = _dbContext.Products.SingleOrDefault(p => p.Id == id);
+            var result = _dbContext.Products.SingleOrDefault(p => p.Id == UpdateProductModel.id);
             if (result != null)
             {
                 result.CatalogNumber = UpdateProductModel.CatalogNumber;

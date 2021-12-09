@@ -3,10 +3,8 @@ using ProductService.Controllers;
 using ProductService.DBContexts;
 using ProductService.Models.DTO;
 using ProductService.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using Newtonsoft.Json;
@@ -14,24 +12,34 @@ using Flurl.Http.Testing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
+
+
 namespace ProductService.Tests.UnitTests
 {
     public class CatalogTests
     {
-        private readonly ProductController _controller;
-        private readonly ProductServiceDatabaseContext _context;
+        private ProductController _controller;
+        private ProductServiceDatabaseContext _context;
         public CatalogTests()
+        {
+            Initialize();
+        }
+
+        public bool Initialize()
         {
             var options = new DbContextOptionsBuilder<ProductServiceDatabaseContext>().UseInMemoryDatabase(databaseName: "InMemoryProductDb").Options;
 
             _context = new ProductServiceDatabaseContext(options);
             _controller = new ProductController(_context, Options.Create(new AppConfig() { ApiGatewayBaseUrl = "http://fake-url.com" }));
-            SeedProductInMemoryDatabaseWithData();
+            SeedProductInMemoryDatabaseWithData(_context);
+
+            return false;
         }
 
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogpageEmpty()
         {
+            Initialize();
             var imgblobs = new List<ImageBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
@@ -49,6 +57,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_FilterOutAllButChat()
         {
+            Initialize();
             var imgblobs = new List<ImageBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
@@ -76,6 +85,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_FilterOutAllButBBB()
         {
+            Initialize();
             var imgblobs = new List<ImageBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
@@ -104,6 +114,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogpage()
         {
+            Initialize();
             var imgblobs = new List<ImageBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
@@ -122,6 +133,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogpageNumber3()
         {
+            Initialize();
             var imgblobs = new List<ImageBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
@@ -140,6 +152,7 @@ namespace ProductService.Tests.UnitTests
         [Fact]
         private async Task GetCatalogEntries_ShouldReturnCatalogProductsFiltertBySearch()
         {
+            Initialize();
             var imgblobs = new List<ImageBlobModel>();
 
             string serializedObject = JsonConvert.SerializeObject(imgblobs);
@@ -147,7 +160,7 @@ namespace ProductService.Tests.UnitTests
             using (var httpTest = new HttpTest())
             {
                 httpTest.RespondWith(serializedObject);
-                var result = await _controller.GetCatalogEntries(0, 50, "C");
+                var result = await _controller.GetCatalogEntries(0, 50, "C","-");
 
                 var okObj = Assert.IsType<OkObjectResult>(result);
                 var model = Assert.IsAssignableFrom<CatalogPage>(okObj.Value);
@@ -159,7 +172,7 @@ namespace ProductService.Tests.UnitTests
             }
         }
 
-        private void SeedProductInMemoryDatabaseWithData()
+        private void SeedProductInMemoryDatabaseWithData(ProductServiceDatabaseContext context)
         {
             var category = new Category { Name = "Apha" };
             var category2 = new Category { Name = "Beta" };
@@ -170,16 +183,19 @@ namespace ProductService.Tests.UnitTests
 
             var data = new List<Product>
                 {
-                    new Product { Name = "BBB", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category },
-                    new Product { Name = "ZZZ", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category2 },
-                    new Product { Name = "AAA", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category3 },
-                    new Product { Name = "CCC", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category4 },
-                    new Product { Name = "DDD", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category5 },
-                    new Product { Name = "FFF", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category2 },
-                    new Product { Name = "GGG", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category },
+                    new Product { Id= 1, Name = "BBB", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category },
+                    new Product { Id= 2, Name = "ZZZ", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category2 },
+                    new Product { Id= 3, Name = "AAA", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category3 },
+                    new Product { Id= 4, Name = "CCC", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category4 },
+                    new Product { Id= 5, Name = "DDD", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category5 },
+                    new Product { Id= 6, Name = "FFF", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category2 },
+                    new Product { Id= 7, Name = "GGG", Description = "", ProductState = ProductState.AVAILABLE, RequiresApproval = true, Category = category },
                 };
-            _context.Products.AddRange(data);
-            _context.SaveChanges();
+            if (!context.Products.Any())
+            {
+                context.Products.AddRange(data);
+            }
+            context.SaveChanges();
         }
     }
 }

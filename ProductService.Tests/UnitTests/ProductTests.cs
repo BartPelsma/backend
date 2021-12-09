@@ -290,6 +290,25 @@ namespace ProductService.Tests.UnitTests
             Assert.IsType<BadRequestObjectResult>(result);
         }
 
+        private async Task UpdateProduct_ShouldChangeDatabase()
+        {
+            var controller = Initialize();
+            using var httpTest = new HttpTest();
+            var productModel = new UpdateProductModel()
+            {
+                id = 1,
+                Name = "Updated Name",
+                CatalogNumber = 1,
+                Location = "Updated Location",
+                RequiresApproval = false,
+                CategoryId = 1,
+                Description = "Updated Description"
+            };
+            var result = await controller.UpdateProduct(productModel);
+
+            Assert.IsType<CreatedResult>(result);
+        }
+
         private void SeedProductInMemoryDatabaseWithData(ProductServiceDatabaseContext context)
         {
             var categories = new List<Category>

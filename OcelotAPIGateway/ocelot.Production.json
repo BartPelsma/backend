@@ -12,6 +12,17 @@
       "UpstreamPathTemplate": "/api/product"
     },
     {
+      "DownstreamPathTemplate": "/product/update",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "aci-product-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/product/update"
+    },
+    {
       "DownstreamPathTemplate": "/product/page/{pageIndex}/{pageSize}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
