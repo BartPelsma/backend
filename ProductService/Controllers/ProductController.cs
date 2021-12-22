@@ -141,6 +141,8 @@ namespace ProductService.Controllers
             return Ok(cartProduct);
         }
 
+        
+
         /// <summary>
         /// Get latest catalog item so the front-end knows what the max is
         /// </summary>
@@ -288,7 +290,18 @@ namespace ProductService.Controllers
                 result.ProductState = ProductState.AVAILABLE;
                 result.Category = await _dbContext.Categories.FirstOrDefaultAsync(x => x.Id == UpdateProductModel.CategoryId);
             }
-                
+
+            if (UpdateProductModel.Images != default && UpdateProductModel.Images.Any())
+            {
+                var addImagesObject = new AddImageModel(UpdateProductModel.id, LinkedTableType.PRODUCT, UpdateProductModel.Images);
+                if ((await $"{_config.Value.ApiGatewayBaseUrl}/api/image".AllowAnyHttpStatus().PostJsonAsync(addImagesObject)).StatusCode != 201)
+                {
+
+                    await _dbContext.SaveChangesAsync();
+                    return BadRequest("PRODUCT.ADD.SAVING_IMAGES_FAILED");
+                }
+            }
+
             await _dbContext.SaveChangesAsync();
 
 
@@ -477,5 +490,8 @@ namespace ProductService.Controllers
 
             return Ok(page);
         }
+        
     }
+
+ 
 }
